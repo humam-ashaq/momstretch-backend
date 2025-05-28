@@ -2,7 +2,6 @@ flask
 flask_cors
 pymongo
 werkzeug
-pyjwt
+PyJWT
 firebase_admin
 gunicorn
-json
