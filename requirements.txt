@@ -3,3 +3,4 @@ flask_cors
 pymongo
 werkzeug
 pyjwt
+firebase_admin

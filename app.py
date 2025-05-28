@@ -6,6 +6,8 @@ from bson import ObjectId
 from dotenv import load_dotenv
 import os
 from functools import wraps
+import firebase_admin
+from firebase_admin import credentials, auth as firebase_auth
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -18,6 +20,10 @@ CORS(app, resources={
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     }
 })
+
+# Inisialisasi Firebase Admin
+# cred = credentials.Certificate("path/ke/firebase-adminsdk.json")
+# firebase_admin.initialize_app(cred)
 
 #wrap fungsi untuk require api key
 def require_api_key(f):
@@ -79,6 +85,36 @@ def login():
 
     print(f"Token: {token}")
 
+    return jsonify({'token': token, 'nama': user['nama']}), 200
+
+@app.route('/login_oauth', methods=['POST'])
+@require_api_key
+def login_oauth():
+    data = request.get_json()
+    firebase_token = data.get('firebase_token')
+
+    try:
+        decoded = firebase_auth.verify_id_token(firebase_token)
+        email = decoded['email']
+        name = decoded.get('name', 'Pengguna Google')
+        firebase_uid = decoded['uid']
+    except Exception as e:
+        return jsonify({'message': 'Token Firebase tidak valid'}), 401
+
+    # Cari user di DB kamu
+    user = users_collection.find_one({'email': email})
+    if not user:
+        # Jika belum ada, buat baru
+        users_collection.insert_one({
+            'email': email,
+            'nama': name,
+            'provider': 'google',
+            'firebase_uid': firebase_uid
+        })
+        user = users_collection.find_one({'email': email})
+
+    # Buat token lokal backend
+    token = generate_token(user['_id'])
     return jsonify({'token': token, 'nama': user['nama']}), 200
 
 @app.route('/profile', methods=['GET'])
