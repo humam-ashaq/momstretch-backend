@@ -5,6 +5,7 @@ from utils import hash_password, verify_password, generate_token, verify_token
 from bson import ObjectId
 from dotenv import load_dotenv
 import os
+import json
 from functools import wraps
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
@@ -21,8 +22,11 @@ CORS(app, resources={
     }
 })
 
-# Inisialisasi Firebase Admin
-cred = credentials.Certificate(".config/firebase-adminsdk.json")
+# Ambil dari environment variable
+firebase_creds = os.getenv('FIREBASE_CREDENTIALS')
+cred_dict = json.loads(firebase_creds)
+cred = credentials.Certificate(cred_dict)
+
 firebase_admin.initialize_app(cred)
 
 #wrap fungsi untuk require api key

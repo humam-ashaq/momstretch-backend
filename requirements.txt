@@ -5,3 +5,4 @@ werkzeug
 pyjwt
 firebase_admin
 gunicorn
+json
