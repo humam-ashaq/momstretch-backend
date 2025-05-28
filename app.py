@@ -22,8 +22,8 @@ CORS(app, resources={
 })
 
 # Inisialisasi Firebase Admin
-# cred = credentials.Certificate("path/ke/firebase-adminsdk.json")
-# firebase_admin.initialize_app(cred)
+cred = credentials.Certificate(".config/firebase-adminsdk.json")
+firebase_admin.initialize_app(cred)
 
 #wrap fungsi untuk require api key
 def require_api_key(f):
