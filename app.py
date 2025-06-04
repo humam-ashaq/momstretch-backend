@@ -38,24 +38,55 @@ except Exception as e:
     # You might want to exit here if Firebase is critical
     # exit(1)
 
+# Add request logging middleware
+@app.before_request
+def log_request():
+    print(f"\n=== Incoming Request ===")
+    print(f"Method: {request.method}")
+    print(f"URL: {request.url}")
+    print(f"Headers: {dict(request.headers)}")
+    if request.is_json:
+        try:
+            body = request.get_json()
+            # Don't log sensitive data in full
+            if 'firebase_token' in body:
+                body_copy = body.copy()
+                body_copy['firebase_token'] = f"[TOKEN:{len(body['firebase_token'])} chars]"
+                print(f"Body: {body_copy}")
+            else:
+                print(f"Body: {body}")
+        except:
+            print("Body: [Unable to parse JSON]")
+    print("=====================\n")
+
 def require_api_key(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         client_key = request.headers.get('x-api-key')
         if not client_key:
+            print("ERROR: No API Key provided")
             return jsonify({'message': 'API Key diperlukan'}), 403
         if client_key != API_KEY:
-            print(f"Invalid API Key: {client_key}")
+            print(f"ERROR: Invalid API Key provided: {client_key}")
             return jsonify({'message': 'API Key tidak valid'}), 403
+        print("API Key validation successful")
         return f(*args, **kwargs)
     return decorated_function
+
+# Add a simple health check endpoint
+@app.route('/', methods=['GET'])
+@require_api_key
+def health_check():
+    return jsonify({'status': 'OK', 'message': 'Server is running'}), 200
 
 @app.route('/register', methods=['POST'])
 @require_api_key
 def register():
     try:
+        print("Processing registration request...")
         data = request.get_json()
         if not data:
+            print("ERROR: No JSON data received")
             return jsonify({'message': 'Data tidak valid'}), 400
             
         email = data.get('email')
@@ -63,18 +94,21 @@ def register():
         nama = data.get('nama')
 
         if not all([email, password, nama]):
+            print("ERROR: Missing required fields")
             return jsonify({'message': 'Semua field harus diisi'}), 400
 
         if users_collection.find_one({'email': email}):
+            print(f"ERROR: Email already exists: {email}")
             return jsonify({'message': 'Email sudah terdaftar'}), 400
 
         hashed = hash_password(password)
-        users_collection.insert_one({
+        result = users_collection.insert_one({
             'email': email,
             'password': hashed,
             'nama': nama
         })
-
+        
+        print(f"User registered successfully: {email} with ID: {result.inserted_id}")
         return jsonify({'message': 'Registrasi berhasil'}), 201
     except Exception as e:
         print(f"Register error: {e}")
@@ -85,21 +119,26 @@ def register():
 @require_api_key
 def login():
     try:
+        print("Processing login request...")
         data = request.get_json()
         if not data:
+            print("ERROR: No JSON data received")
             return jsonify({'message': 'Data tidak valid'}), 400
             
         email = data.get('email')
         password = data.get('password')
 
         if not email or not password:
+            print("ERROR: Missing email or password")
             return jsonify({'message': 'Email dan password harus diisi'}), 400
 
         user = users_collection.find_one({'email': email})
         if not user:
+            print(f"ERROR: Email not found: {email}")
             return jsonify({'message': 'Email tidak ditemukan'}), 404
 
         if not verify_password(user['password'], password):
+            print(f"ERROR: Wrong password for: {email}")
             return jsonify({'message': 'Password salah'}), 401
 
         token = generate_token(user['_id'])
@@ -111,36 +150,54 @@ def login():
         traceback.print_exc()
         return jsonify({'message': 'Terjadi kesalahan server'}), 500
 
-@app.route('/login_oauth', methods=['POST'])
+@app.route('/login_oauth', methods=['POST', 'OPTIONS'])
 @require_api_key
 def login_oauth():
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        print("Handling OPTIONS preflight request")
+        response = jsonify({'status': 'OK'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-api-key')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+    
     try:
-        print("OAuth login request received")
+        print("=== Processing OAuth login request ===")
+        
+        # Validate content type
+        if not request.is_json:
+            print("ERROR: Request is not JSON")
+            return jsonify({'message': 'Content-Type harus application/json'}), 400
+        
         data = request.get_json()
         
         if not data:
-            print("No JSON data received")
+            print("ERROR: No JSON data received")
             return jsonify({'message': 'Data tidak valid'}), 400
         
         firebase_token = data.get('firebase_token')
         if not firebase_token:
-            print("No firebase_token in request")
+            print("ERROR: No firebase_token in request")
             return jsonify({'message': 'Firebase token diperlukan'}), 400
 
         print(f"Received firebase token (length: {len(firebase_token)})")
 
         # Verify Firebase token
         try:
+            print("Verifying Firebase token...")
             decoded = firebase_auth.verify_id_token(firebase_token)
             print(f"Firebase token verified successfully for UID: {decoded.get('uid')}")
+            print(f"Token contains email: {decoded.get('email')}")
         except firebase_auth.InvalidIdTokenError as e:
-            print(f"Invalid Firebase token: {e}")
+            print(f"ERROR: Invalid Firebase token: {e}")
             return jsonify({'message': 'Token Firebase tidak valid'}), 401
         except firebase_auth.ExpiredIdTokenError as e:
-            print(f"Expired Firebase token: {e}")
+            print(f"ERROR: Expired Firebase token: {e}")
             return jsonify({'message': 'Token Firebase sudah kadaluarsa'}), 401
         except Exception as e:
-            print(f"Firebase token verification error: {e}")
+            print(f"ERROR: Firebase token verification error: {e}")
+            traceback.print_exc()
             return jsonify({'message': 'Gagal memverifikasi token Firebase'}), 401
 
         email = decoded.get('email')
@@ -148,43 +205,60 @@ def login_oauth():
         firebase_uid = decoded.get('uid')
 
         if not email:
-            print("No email in Firebase token")
+            print("ERROR: No email in Firebase token")
             return jsonify({'message': 'Email tidak ditemukan dalam token'}), 400
 
         print(f"Processing OAuth login for email: {email}")
 
         # Find or create user
-        user = users_collection.find_one({'email': email})
-        if not user:
-            print(f"Creating new user for {email}")
-            user_data = {
-                'email': email,
-                'nama': name,
-                'provider': 'google',
-                'firebase_uid': firebase_uid
-            }
-            result = users_collection.insert_one(user_data)
-            user = users_collection.find_one({'_id': result.inserted_id})
-        else:
-            print(f"User found: {email}")
-            # Update firebase_uid if not present
-            if 'firebase_uid' not in user:
-                users_collection.update_one(
-                    {'_id': user['_id']},
-                    {'$set': {'firebase_uid': firebase_uid}}
-                )
+        try:
+            user = users_collection.find_one({'email': email})
+            if not user:
+                print(f"Creating new user for {email}")
+                user_data = {
+                    'email': email,
+                    'nama': name,
+                    'provider': 'google',
+                    'firebase_uid': firebase_uid
+                }
+                result = users_collection.insert_one(user_data)
+                user = users_collection.find_one({'_id': result.inserted_id})
+                print(f"New user created with ID: {result.inserted_id}")
+            else:
+                print(f"Existing user found: {email}")
+                # Update firebase_uid if not present
+                if 'firebase_uid' not in user:
+                    users_collection.update_one(
+                        {'_id': user['_id']},
+                        {'$set': {'firebase_uid': firebase_uid}}
+                    )
+                    print("Updated user with Firebase UID")
+        except Exception as e:
+            print(f"ERROR: Database operation failed: {e}")
+            traceback.print_exc()
+            return jsonify({'message': 'Terjadi kesalahan database'}), 500
 
         # Generate local token
-        token = generate_token(user['_id'])
-        print(f"OAuth login successful for {email}")
+        try:
+            token = generate_token(user['_id'])
+            print(f"Generated token for user: {email}")
+        except Exception as e:
+            print(f"ERROR: Token generation failed: {e}")
+            traceback.print_exc()
+            return jsonify({'message': 'Gagal membuat token'}), 500
         
-        return jsonify({
+        response_data = {
             'token': token, 
             'nama': user['nama']
-        }), 200
+        }
+        
+        print(f"OAuth login successful for {email}")
+        print(f"Response data: {response_data}")
+        
+        return jsonify(response_data), 200
 
     except Exception as e:
-        print(f"OAuth login error: {e}")
+        print(f"CRITICAL ERROR in OAuth login: {e}")
         traceback.print_exc()
         return jsonify({'message': 'Terjadi kesalahan server saat login OAuth'}), 500
 
@@ -192,22 +266,27 @@ def login_oauth():
 @require_api_key
 def profile():
     try:
+        print("Processing profile request...")
         auth_header = request.headers.get('Authorization')
         print(f"Auth Header: {auth_header}")
         
         if not auth_header or not auth_header.startswith('Bearer '):
+            print("ERROR: No valid Authorization header")
             return jsonify({'message': 'Token tidak ditemukan'}), 401
 
         token = auth_header.split(' ')[1]
         user_id = verify_token(token)
 
         if not user_id:
+            print("ERROR: Token verification failed")
             return jsonify({'message': 'Token tidak valid'}), 401
 
         user = users_collection.find_one({'_id': ObjectId(user_id)})
         if not user:
+            print(f"ERROR: User not found for ID: {user_id}")
             return jsonify({'message': 'Pengguna tidak ditemukan'}), 404
 
+        print(f"Profile request successful for user: {user['email']}")
         return jsonify({
             'nama': user['nama'],
             'email': user['email'],
@@ -223,18 +302,22 @@ def profile():
 @require_api_key
 def update_profile():
     try:
+        print("Processing profile update request...")
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
+            print("ERROR: No valid Authorization header")
             return jsonify({'message': 'Token diperlukan'}), 401
 
         token = auth_header.split(" ")[1]
         user_id = verify_token(token)
 
         if not user_id:
+            print("ERROR: Token verification failed")
             return jsonify({'message': 'Token tidak valid atau expired'}), 401
 
         data = request.get_json()
         if not data:
+            print("ERROR: No JSON data received")
             return jsonify({'message': 'Data tidak valid'}), 400
             
         usia = data.get('usia')
@@ -247,6 +330,7 @@ def update_profile():
             update_fields['foto_profil'] = foto_profil
 
         if not update_fields:
+            print("ERROR: No fields to update")
             return jsonify({'message': 'Tidak ada data untuk diperbarui'}), 400
 
         result = users_collection.update_one(
@@ -255,8 +339,10 @@ def update_profile():
         )
 
         if result.matched_count == 0:
+            print(f"ERROR: User not found for update: {user_id}")
             return jsonify({'message': 'Pengguna tidak ditemukan'}), 404
 
+        print(f"Profile updated successfully for user: {user_id}")
         return jsonify({'message': 'Profil berhasil diperbarui'})
     except Exception as e:
         print(f"Update profile error: {e}")
@@ -267,21 +353,26 @@ def update_profile():
 @require_api_key
 def delete_profile():
     try:
+        print("Processing profile deletion request...")
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
+            print("ERROR: No valid Authorization header")
             return jsonify({'message': 'Token tidak ditemukan'}), 401
 
         token = auth_header.split(" ")[1]
         user_id = verify_token(token)
 
         if not user_id:
+            print("ERROR: Token verification failed")
             return jsonify({'message': 'Token tidak valid atau expired'}), 401
 
         result = users_collection.delete_one({'_id': ObjectId(user_id)})
 
         if result.deleted_count == 0:
+            print(f"ERROR: User not found for deletion: {user_id}")
             return jsonify({'message': 'Pengguna tidak ditemukan'}), 404
 
+        print(f"Profile deleted successfully for user: {user_id}")
         return jsonify({'message': 'Akun berhasil dihapus'}), 200
     except Exception as e:
         print(f"Delete profile error: {e}")
@@ -290,14 +381,18 @@ def delete_profile():
 
 @app.errorhandler(404)
 def not_found(error):
+    print(f"404 Error: {request.url} not found")
     return jsonify({'message': 'Endpoint tidak ditemukan'}), 404
 
 @app.errorhandler(500)
 def internal_error(error):
+    print(f"500 Error: {error}")
     return jsonify({'message': 'Terjadi kesalahan server internal'}), 500
 
 if __name__ == '__main__':
-    print(f"Starting Flask app with API_KEY: {'*' * len(API_KEY) if API_KEY else 'NOT SET'}")
+    print(f"Starting Flask app...")
+    print(f"API_KEY: {'SET' if API_KEY else 'NOT SET'}")
+    print(f"Firebase Admin: {'Initialized' if firebase_admin._apps else 'Not initialized'}")
     app.run(debug=True, host='0.0.0.0', port=5000)
 
 # url ngrok= https://externally-popular-adder.ngrok-free.app
