@@ -394,5 +394,3 @@ if __name__ == '__main__':
     print(f"API_KEY: {'SET' if API_KEY else 'NOT SET'}")
     print(f"Firebase Admin: {'Initialized' if firebase_admin._apps else 'Not initialized'}")
     app.run(debug=True, host='0.0.0.0', port=5000)
-
-# url ngrok= https://externally-popular-adder.ngrok-free.app
