@@ -25,7 +25,7 @@ MomStretch+ is a mobile-based health and fitness platform supported by a real-ti
 
 ---
 
-## ⚙️ Technology Stack
+## ⚙️ Technology Stack (Backend)
 
 | Layer         | Technology          |
 |---------------|----------------------|
@@ -34,6 +34,8 @@ MomStretch+ is a mobile-based health and fitness platform supported by a real-ti
 | Security      | Fernet (cryptography)|
 | Management    | pip + venv           |
 | Deployment    | Local / Cloud-ready  |
+
+> For frontend stack, see: [momstretch](https://github.com/humam-ashaq/momstretch)
 
 ---
 
