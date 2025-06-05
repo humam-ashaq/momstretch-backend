@@ -1,7 +1,6 @@
-
 # 🧘‍♀️ MomStretch+ Backend
 
-> Backend API untuk platform *MomStretch+* — bantu ibu pasca-melahirkan tetap bugar dengan rutinitas olahraga personal.
+> Backend API for the *MomStretch+* platform — helping postpartum moms stay fit with personalized workout routines.
 
 ![Python](https://img.shields.io/badge/Python-3.x-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-%20microframework-lightgrey)
@@ -10,109 +9,108 @@
 
 ---
 
-## 📌 Ringkasan
+## 📌 Overview
 
-MomStretch+ adalah platform kesehatan dan kebugaran berbasis mobile yang didukung dengan model computer vision realtime yang membantu para ibu dalam melakukan gerakan senam, dan didukung oleh backend API modular berbasis Flask. Fokus utamanya adalah menyediakan layanan yang aman, ringan, dan mudah dikembangkan untuk mendukung fitur-fitur pelacakan kebugaran dan rutinitas olahraga.
-
----
-
-## ✨ Fitur Utama
-
-- 🔐 Autentikasi dengan token dan Fernet encryption
-- 🧩 Struktur modular per route
-- 🗂️ Middleware untuk logging & proteksi endpoint
-- 🔄 CRUD endpoint untuk berbagai entitas
-- ⚙️ Utilitas untuk hash dan enkripsi data
+MomStretch+ is a mobile-based health and fitness platform supported by a real-time computer vision model that assists mothers in performing exercise routines. It is backed by a modular Flask-based backend API. The main focus is to provide a secure, lightweight, and easily extensible service to support fitness tracking and workout routine features.
 
 ---
 
-## ⚙️ Teknologi
+## ✨ Key Features
 
-| Stack        | Teknologi     |
-|--------------|----------------|
-| Bahasa       | Python 3.x     |
-| Framework    | Flask          |
-| Keamanan     | Fernet (cryptography) |
-| Manajemen    | pip + venv     |
-| Deployment   | Local / Cloud-ready |
+- 🔐 Authentication using token and Fernet encryption
+- 🧩 Modular structure per route
+- 🗂️ Middleware for logging & endpoint protection
+- 🔄 CRUD endpoints for various entities
+- ⚙️ Utilities for hashing and data encryption
 
 ---
 
-## 🚀 Instalasi
+## ⚙️ Technology Stack
+
+| Layer         | Technology          |
+|---------------|----------------------|
+| Language      | Python 3.x           |
+| Framework     | Flask                |
+| Security      | Fernet (cryptography)|
+| Management    | pip + venv           |
+| Deployment    | Local / Cloud-ready  |
+
+---
+
+## 🚀 Installation
 
 ```bash
-# Clone repositori
+# Clone the repository
 git clone https://github.com/humam-ashaq/momstretch-backend.git
 cd momstretch-backend
 
-# Buat virtual environment
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate   # atau venv\Scripts\activate untuk Windows
+source venv/bin/activate   # or venv\Scripts\activate on Windows
 
 # Install dependencies
 pip install -r requirements.txt
 
-# (Opsional) Generate kunci enkripsi
+# (Optional) Generate encryption key
 python generate_fernet_key.py
 
-# Jalankan server
+# Run the server
 python app.py
 ```
 
-Server akan berjalan di `http://127.0.0.1:5000/`
+Server will run at `http://127.0.0.1:5000/`
 
 ---
 
-## 🧱 Struktur Direktori
+## 🧱 Project Structure
 
 ```
 momstretch-backend/
-├── app.py                  # Entry point aplikasi
-├── db.py                   # Koneksi database
-├── routes/                 # Folder endpoint API
-├── middleware.py           # Middleware untuk autentikasi
-├── utils.py                # Fungsi-fungsi umum
-├── generate_fernet_key.py  # Tool enkripsi
-├── requirements.txt        # Dependensi Python
+├── app.py                  # Application entry point
+├── db.py                   # Database connection
+├── routes/                 # API endpoint folder
+├── middleware.py           # Middleware for authentication
+├── utils.py                # Utility functions
+├── generate_fernet_key.py  # Encryption tool
+├── requirements.txt        # Python dependencies
 ```
 
 ---
 
-## 🧪 Contoh Endpoint
+## 🧪 Sample Endpoints
 
-> Tambahkan dokumentasi Swagger/OpenAPI jika tersedia.
+> Add Swagger/OpenAPI documentation if available.
 
-| Method | Endpoint          | Deskripsi             |
-|--------|-------------------|------------------------|
-| GET    | `/profile`        | Mendapatkan profile user |
-| POST   | `/login`          | Login dan dapatkan token |
-| ...    | ...               | ...                    |
-
----
-
-## 🧑‍💻 Kontribusi
-
-Kami membuka kontribusi dari komunitas:
-
-1. Fork repo ini
-2. Buat branch baru (`feature/fitur-baru`)
-3. Commit perubahan
-4. Buka Pull Request
+| Method | Endpoint          | Description             |
+|--------|-------------------|--------------------------|
+| GET    | `/profile`        | Get user profile         |
+| POST   | `/login`          | Login and receive token  |
+| ...    | ...               | ...                      |
 
 ---
 
-## 📄 Lisensi
+## 🧑‍💻 Contribution
 
-Lisensi belum ditentukan. Silakan tambahkan file `LICENSE` jika diperlukan.
+We welcome community contributions:
+
+1. Fork this repo
+2. Create a new branch (`feature/new-feature`)
+3. Commit your changes
+4. Open a Pull Request
 
 ---
 
-## 👨‍💻 Author
-  
-📎 [Humam Asathin Haqqani](https://github.com/humam-ashaq)
+## 📄 License
+
+License not yet specified. Please add a `LICENSE` file if needed.
+
+---
+
+## 👨‍💻 Authors
+
+📎 [Humam Asathin Haqqani](https://github.com/humam-ashaq)  
 📎 [Asih Rahmawati](https://github.com/Asihraa)
 
-
 ---
 
-> Dibuat dengan ❤️ untuk mendukung gaya hidup sehat ibu-ibu di seluruh dunia.
+> Made with ❤️ to support a healthy lifestyle for moms around the world.
