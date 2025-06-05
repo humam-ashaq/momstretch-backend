@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from db import users_collection
-from utils import hash_password, verify_password, generate_token, verify_token
+from utils import hash_password, verify_password, generate_token, verify_token, send_otp_email, generate_otp
 from bson import ObjectId
 from dotenv import load_dotenv
 import os
@@ -10,6 +10,7 @@ from functools import wraps
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
 import traceback
+from datetime import datetime, timedelta
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -102,18 +103,54 @@ def register():
             return jsonify({'message': 'Email sudah terdaftar'}), 400
 
         hashed = hash_password(password)
-        result = users_collection.insert_one({
+        otp_code = generate_otp()
+        otp_expired = datetime.utcnow() + timedelta(minutes=10)
+
+        user = {
             'email': email,
             'password': hashed,
-            'nama': nama
-        })
+            'nama': nama,
+            'is_verified': False,
+            'otp_code': otp_code,
+            'otp_expired': otp_expired
+        }
+
+        users_collection.insert_one(user)
+        send_otp_email(email, otp_code)
+
+        print(f"User registered successfully: {email}")
+        return jsonify({'message': 'Kode OTP telah dikirim ke email'}), 201
         
-        print(f"User registered successfully: {email} with ID: {result.inserted_id}")
-        return jsonify({'message': 'Registrasi berhasil'}), 201
     except Exception as e:
-        print(f"Register error: {e}")
-        traceback.print_exc()
-        return jsonify({'message': 'Terjadi kesalahan server'}), 500
+        print(f"❌ Error saat register: {e}")
+        return jsonify({'message': 'Terjadi kesalahan di server'}), 500
+    
+@app.route('/verify-otp', methods=['POST'])
+@require_api_key
+def verify_otp():
+    data = request.get_json()
+    email = data.get('email')
+    otp = data.get('otp')
+
+    user = users_collection.find_one({'email': email})
+    if not user:
+        return jsonify({'message': 'Email tidak ditemukan'}), 404
+
+    if user.get('is_verified'):
+        return jsonify({'message': 'Akun sudah terverifikasi'}), 400
+
+    if user.get('otp_code') != otp:
+        return jsonify({'message': 'Kode OTP salah'}), 400
+
+    if datetime.utcnow() > user.get('otp_expired'):
+        return jsonify({'message': 'Kode OTP sudah kedaluwarsa'}), 400
+
+    users_collection.update_one({'email': email}, {
+        '$set': {'is_verified': True},
+        '$unset': {'otp_code': "", 'otp_expired': ""}
+    })
+
+    return jsonify({'message': 'Verifikasi berhasil'}), 200
 
 @app.route('/login', methods=['POST'])
 @require_api_key
@@ -136,6 +173,9 @@ def login():
         if not user:
             print(f"ERROR: Email not found: {email}")
             return jsonify({'message': 'Email tidak ditemukan'}), 404
+        
+        if not user.get('is_verified'):
+            return jsonify({'message': 'Email belum diverifikasi'}), 403
 
         if not verify_password(user['password'], password):
             print(f"ERROR: Wrong password for: {email}")
@@ -186,12 +226,25 @@ def login_oauth():
         # Verify Firebase token
         try:
             print("Verifying Firebase token...")
-            decoded = firebase_auth.verify_id_token(firebase_token)
+            decoded = firebase_auth.verify_id_token(firebase_token, check_revoked=False, clock_skew_seconds=60)
             print(f"Firebase token verified successfully for UID: {decoded.get('uid')}")
             print(f"Token contains email: {decoded.get('email')}")
         except firebase_auth.InvalidIdTokenError as e:
-            print(f"ERROR: Invalid Firebase token: {e}")
-            return jsonify({'message': 'Token Firebase tidak valid'}), 401
+            error_msg = str(e)
+            print(f"ERROR: Invalid Firebase token: {error_msg}")
+            
+            # Handle specific clock skew errors
+            if "used too early" in error_msg or "clock" in error_msg.lower():
+                print("Clock skew detected, retrying with more tolerance...")
+                try:
+                    # Retry with more generous clock skew tolerance
+                    decoded = firebase_auth.verify_id_token(firebase_token, check_revoked=False, clock_skew_seconds=300)
+                    print("Token verified successfully with clock skew tolerance")
+                except Exception as retry_e:
+                    print(f"Retry failed: {retry_e}")
+                    return jsonify({'message': 'Sinkronisasi waktu bermasalah. Coba lagi dalam beberapa detik.'}), 401
+            else:
+                return jsonify({'message': 'Token Firebase tidak valid'}), 401
         except firebase_auth.ExpiredIdTokenError as e:
             print(f"ERROR: Expired Firebase token: {e}")
             return jsonify({'message': 'Token Firebase sudah kadaluarsa'}), 401
