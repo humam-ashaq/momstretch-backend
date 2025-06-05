@@ -1,7 +1,7 @@
 
-# 🧘‍♀️ MomStretch Backend
+# 🧘‍♀️ MomStretch+ Backend
 
-> Backend API untuk platform *MomStretch* — bantu ibu-ibu tetap bugar dengan rutinitas olahraga personal.
+> Backend API untuk platform *MomStretch+* — bantu ibu pasca-melahirkan tetap bugar dengan rutinitas olahraga personal.
 
 ![Python](https://img.shields.io/badge/Python-3.x-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-%20microframework-lightgrey)
@@ -12,7 +12,7 @@
 
 ## 📌 Ringkasan
 
-MomStretch adalah platform kesehatan dan kebugaran berbasis mobile/web yang didukung oleh backend API modular berbasis Flask. Fokus utamanya adalah menyediakan layanan yang aman, ringan, dan mudah dikembangkan untuk mendukung fitur-fitur pelacakan kebugaran dan rutinitas olahraga.
+MomStretch+ adalah platform kesehatan dan kebugaran berbasis mobile yang didukung dengan model computer vision realtime yang membantu para ibu dalam melakukan gerakan senam, dan didukung oleh backend API modular berbasis Flask. Fokus utamanya adalah menyediakan layanan yang aman, ringan, dan mudah dikembangkan untuk mendukung fitur-fitur pelacakan kebugaran dan rutinitas olahraga.
 
 ---
 
@@ -84,8 +84,8 @@ momstretch-backend/
 
 | Method | Endpoint          | Deskripsi             |
 |--------|-------------------|------------------------|
-| GET    | `/users`          | Mendapatkan daftar user |
-| POST   | `/auth/login`     | Login dan dapatkan token |
+| GET    | `/profile`        | Mendapatkan profile user |
+| POST   | `/login`          | Login dan dapatkan token |
 | ...    | ...               | ...                    |
 
 ---
@@ -108,9 +108,10 @@ Lisensi belum ditentukan. Silakan tambahkan file `LICENSE` jika diperlukan.
 ---
 
 ## 👨‍💻 Author
+  
+📎 [Humam Asathin Haqqani](https://github.com/humam-ashaq)
+📎 [Asih Rahmawati](https://github.com/Asihraa)
 
-**Humam Ashaq**  
-📎 [GitHub](https://github.com/humam-ashaq)
 
 ---
 
