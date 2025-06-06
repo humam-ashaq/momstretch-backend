@@ -38,6 +38,7 @@ def register():
             'email': email,
             'password': hashed,
             'nama': nama,
+            'program': '',
             'is_verified': False,
             'otp_code': otp_code,
             'otp_expired': otp_expired
@@ -199,6 +200,7 @@ def login_oauth():
                 user_data = {
                     'email': email,
                     'nama': name,
+                    'program': '',
                     'provider': 'google',
                     'firebase_uid': firebase_uid
                 }

@@ -30,11 +30,12 @@ def get_profile():
         if not user:
             print(f"ERROR: User not found for ID: {user_id}")
             return jsonify({'message': 'Pengguna tidak ditemukan'}), 404
-
+        
         print(f"Profile request successful for user: {user['email']}")
         return jsonify({
             'nama': user['nama'],
             'email': user['email'],
+            'program': user['program'],
             'usia': user.get('usia'),
             'foto_profil': user.get('foto_profil')
         }), 200
@@ -91,6 +92,46 @@ def update_profile():
         return jsonify({'message': 'Profil berhasil diperbarui'})
     except Exception as e:
         print(f"Update profile error: {e}")
+        traceback.print_exc()
+        return jsonify({'message': 'Terjadi kesalahan server'}), 500
+    
+@profile_bp.route('/program', methods=['PUT'])
+@require_api_key
+def update_program():
+    try:
+        print("Processing profile update request...")
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            print("ERROR: No valid Authorization header")
+            return jsonify({'message': 'Token diperlukan'}), 401
+
+        token = auth_header.split(" ")[1]
+        user_id = verify_token(token)
+
+        if not user_id:
+            print("ERROR: Token verification failed")
+            return jsonify({'message': 'Token tidak valid atau expired'}), 401
+
+        data = request.get_json()
+        if not data:
+            print("ERROR: No JSON data received")
+            return jsonify({'message': 'Data tidak valid'}), 400
+            
+        program = data.get('program')
+
+        result = users_collection.update_one(
+            {'_id': ObjectId(user_id)},
+            {'$set': {'program': program}}
+        )
+
+        if result.matched_count == 0:
+            print(f"ERROR: User not found for update: {user_id}")
+            return jsonify({'message': 'Pengguna tidak ditemukan'}), 404
+
+        print(f"Programe updated successfully for user: {user_id}")
+        return jsonify({'message': 'Program berhasil diperbarui'})
+    except Exception as e:
+        print(f"Update program error: {e}")
         traceback.print_exc()
         return jsonify({'message': 'Terjadi kesalahan server'}), 500
 
