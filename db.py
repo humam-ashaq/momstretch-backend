@@ -9,6 +9,7 @@ client = MongoClient(uri, server_api=ServerApi('1'))  # Ubah kalau pakai MongoDB
 db = client['momstretch']
 
 users_collection = db['users']
+articles_collection = db['articles']
 
 try:
     client.admin.command('ping')
