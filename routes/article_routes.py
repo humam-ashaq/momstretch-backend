@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from db import articles_collection
+from db import articles_collection, visualization_collection
 from middleware import require_api_key
 from bson import ObjectId
 import traceback
@@ -90,3 +90,19 @@ def get_article_detail(article_id):
         print(f"Article detail error: {e}")
         traceback.print_exc()
         return jsonify({'message': 'Terjadi kesalahan server'}), 500
+    
+
+#Endpoint untuk Visualisasi
+@article_bp.route("/api/visualization", methods=["GET"])
+@require_api_key
+def get_visualization_data():
+    try:
+        summary = visualization_collection.find_one({"_id": "summary"}, {"_id": 0})
+        
+        if not summary:
+            return jsonify({"message": "No summary found"}), 404
+        
+        print(summary["data"])
+        return jsonify(summary["data"])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -10,6 +10,7 @@ db = client['momstretch']
 
 users_collection = db['users']
 articles_collection = db['articles']
+visualization_collection = db['visualization']
 
 try:
     client.admin.command('ping')
