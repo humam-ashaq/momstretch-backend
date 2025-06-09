@@ -12,16 +12,32 @@ article_bp = Blueprint('article', __name__)
 def get_articles():
     try:
         print("Processing articles list request...")
+
+        # Parameter untuk limit (opsional)
+        limit = request.args.get('limit', default=None, type=int)
         
         # Ambil hanya kolom untuk list, exclude content
         projection = {
             '_id': 1,  # Include _id untuk reference
             'title': 1,
             'image_url': 1,
-            'month_year': 1
+            'month_year': 1,
+            'published_date': 1
         }
         
-        articles = list(articles_collection.find({}, projection))
+        # Query dengan sorting berdasarkan _id descending (terbaru dulu)
+        # Jika ada field created_at, gunakan itu. Jika tidak, _id sudah cukup karena ObjectId berisi timestamp
+        query = articles_collection.find({}, projection)
+        
+        # Sort berdasarkan published_date descending (artikel terbaru = published_date terbaru)
+        # Fallback ke _id jika published_date sama atau tidak ada
+        query = query.sort([('published_date', -1), ('_id', -1)])
+        
+        # Apply limit jika ada
+        if limit:
+            query = query.limit(limit)
+            
+        articles = list(query)
         print(f"Found {len(articles)} articles")
         
         if not articles:
