@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from db import users_collection
-from utils import hash_password, verify_password, generate_token, send_otp_email, generate_otp
+from db import users_collection, history_collection
+from utils import hash_password, verify_password, generate_token, send_otp_email, generate_otp, verify_token
 from middleware import require_api_key
 from firebase_admin import auth as firebase_auth
 import traceback
@@ -112,6 +112,14 @@ def login():
 
         token = generate_token(user['_id'])
         print(f"Login successful for {email}, token: {token[:20]}...")
+
+        # Simpan riwayat login
+        history_collection.insert_one({
+            'user_id': str(user['_id']),
+            'timestamp': datetime.utcnow(),
+            'device': request.headers.get('User-Agent'),
+            'ip': request.remote_addr,
+        })
 
         return jsonify({'token': token, 'nama': user['nama']}), 200
     except Exception as e:
@@ -237,6 +245,14 @@ def login_oauth():
         
         print(f"OAuth login successful for {email}")
         print(f"Response data: {response_data}")
+
+        # Simpan riwayat login
+        history_collection.insert_one({
+            'user_id': str(user['_id']),
+            'timestamp': datetime.utcnow(),
+            'device': request.headers.get('User-Agent'),
+            'ip': request.remote_addr,
+        })
         
         return jsonify(response_data), 200
 
@@ -244,3 +260,30 @@ def login_oauth():
         print(f"CRITICAL ERROR in OAuth login: {e}")
         traceback.print_exc()
         return jsonify({'message': 'Terjadi kesalahan server saat login OAuth'}), 500
+
+@auth_bp.route('/login-history', methods=['GET'])
+@require_api_key
+def get_login_history():
+    try:
+        auth_header = request.headers.get('Authorization')
+
+        if not auth_header or not auth_header.startswith('Bearer '):
+            print("ERROR: No valid Authorization header")
+            return jsonify({'message': 'Token tidak ditemukan'}), 401
+
+        token = auth_header.split(' ')[1]
+        user_id = verify_token(token)
+
+        if not user_id:
+            print("ERROR: Token verification failed")
+            return jsonify({'message': 'Token tidak valid'}), 401
+        
+        history = list(history_collection.find({'user_id': user_id}).sort('timestamp', -1))
+        for h in history:
+            h['_id'] = str(h['_id'])
+            h['timestamp'] = h['timestamp'].isoformat()
+        return jsonify(history) 
+    except Exception as e:
+        print(f"History error: {e}")
+        traceback.print_exc()
+        return jsonify({'message': 'Terjadi kesalahan server'}), 500
