@@ -13,7 +13,7 @@ def get_articles():
     try:
         print("Processing articles list request...")
 
-        # Parameter untuk limit (opsional)
+        # Parameter untuk limit
         limit = request.args.get('limit', default=None, type=int)
         
         # Ambil hanya kolom untuk list, exclude content

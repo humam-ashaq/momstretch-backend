@@ -23,6 +23,7 @@ def get_profile():
         user_id = verify_token(token)
 
         if not user_id:
+            
             print("ERROR: Token verification failed")
             return jsonify({'message': 'Token tidak valid'}), 401
 

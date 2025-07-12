@@ -6,11 +6,13 @@ import json
 import firebase_admin
 from firebase_admin import credentials
 import traceback
-# Import blueprints
+
 from routes.auth_routes import auth_bp
 from routes.profile_routes import profile_bp
 from routes.main_routes import main_bp
 from routes.article_routes import article_bp
+from routes.stretching_routes import stretching_bp
+from routes.epds_routes import epds_bp
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -77,6 +79,8 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(article_bp)
+    app.register_blueprint(stretching_bp)
+    app.register_blueprint(epds_bp)
     
     return app
 

@@ -93,6 +93,7 @@ def login():
             
         email = data.get('email')
         password = data.get('password')
+        device_info = data.get('device', 'Unknown Device')
 
         if not email or not password:
             print("ERROR: Missing email or password")
@@ -117,7 +118,7 @@ def login():
         history_collection.insert_one({
             'user_id': str(user['_id']),
             'timestamp': datetime.utcnow(),
-            'device': request.headers.get('User-Agent'),
+            'device': device_info,
             'ip': request.remote_addr,
         })
 
@@ -153,6 +154,7 @@ def login_oauth():
             print("ERROR: No JSON data received")
             return jsonify({'message': 'Data tidak valid'}), 400
         
+        device_info = data.get('device', 'Unknown Device')
         firebase_token = data.get('firebase_token')
         if not firebase_token:
             print("ERROR: No firebase_token in request")
@@ -250,7 +252,7 @@ def login_oauth():
         history_collection.insert_one({
             'user_id': str(user['_id']),
             'timestamp': datetime.utcnow(),
-            'device': request.headers.get('User-Agent'),
+            'device': device_info,
             'ip': request.remote_addr,
         })
         

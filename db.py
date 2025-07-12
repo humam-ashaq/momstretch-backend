@@ -5,13 +5,16 @@ import os
 
 uri = os.getenv("DB_URI")
 
-client = MongoClient(uri, server_api=ServerApi('1'))  # Ubah kalau pakai MongoDB Atlas
+client = MongoClient(uri, server_api=ServerApi('1'))
 db = client['momstretch']
 
 users_collection = db['users']
 articles_collection = db['articles']
 visualization_collection = db['visualization']
 history_collection = db['login_history']
+movement_collection = db['movement']
+stretching_collection = db['stretching']
+epds_collection = db['epds_records']
 
 try:
     client.admin.command('ping')
