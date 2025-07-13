@@ -10,11 +10,10 @@ stretching_bp = Blueprint('stretching', __name__)
 @require_api_key
 def get_stretching():
     try:
-        # TAMBAHKAN: Ambil parameter 'program' dari query
         program_filter = request.args.get('program')
 
         query = {}
-        # TAMBAHKAN: Jika ada filter program, tambahkan ke query
+        
         if program_filter:
             query['program'] = program_filter
 
@@ -24,7 +23,7 @@ def get_stretching():
             'program': 1,
             'imageUrl': 1,
             'stretchingDesc': 1,
-            'duration': 1, # Ambil durasi juga untuk ditampilkan di list
+            'duration': 1, 
         }
 
         stretchings_cursor = stretching_collection.find(query, projection)
