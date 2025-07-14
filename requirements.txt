@@ -6,4 +6,3 @@ PyJWT
 firebase_admin
 gunicorn
 dotenv
-gunicorn
