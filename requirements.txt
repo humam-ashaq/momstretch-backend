@@ -7,4 +7,4 @@ firebase_admin
 gunicorn
 dotenv
 opencv-python-headless
-tensorflow-cpu==2.13.0
+tensorflow-cpu==2.16.1
