@@ -49,35 +49,31 @@ def get_profile():
 @require_api_key
 def update_profile():
     try:
-        print("Processing profile update request...")
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
-            print("ERROR: No valid Authorization header")
             return jsonify({'message': 'Token diperlukan'}), 401
 
         token = auth_header.split(" ")[1]
         user_id = verify_token(token)
 
         if not user_id:
-            print("ERROR: Token verification failed")
             return jsonify({'message': 'Token tidak valid atau expired'}), 401
 
         data = request.get_json()
         if not data:
-            print("ERROR: No JSON data received")
             return jsonify({'message': 'Data tidak valid'}), 400
             
-        usia = data.get('usia')
-        foto_profil = data.get('foto_profil')
+        # Diubah: Ambil 'nama' dan 'program' dari data JSON
+        nama = data.get('nama')
+        program = data.get('program')
 
         update_fields = {}
-        if usia is not None:
-            update_fields['usia'] = usia
-        if foto_profil is not None:
-            update_fields['foto_profil'] = foto_profil
+        if nama is not None:
+            update_fields['nama'] = nama
+        if program is not None:
+            update_fields['program'] = program
 
         if not update_fields:
-            print("ERROR: No fields to update")
             return jsonify({'message': 'Tidak ada data untuk diperbarui'}), 400
 
         result = users_collection.update_one(
@@ -86,10 +82,8 @@ def update_profile():
         )
 
         if result.matched_count == 0:
-            print(f"ERROR: User not found for update: {user_id}")
             return jsonify({'message': 'Pengguna tidak ditemukan'}), 404
 
-        print(f"Profile updated successfully for user: {user_id}")
         return jsonify({'message': 'Profil berhasil diperbarui'})
     except Exception as e:
         print(f"Update profile error: {e}")
