@@ -84,8 +84,9 @@ def create_app():
     
     return app
 
+app = create_app()
+
 if __name__ == '__main__':
-    app = create_app()
     print(f"Starting Flask app...")
     print(f"API_KEY: {'SET' if API_KEY else 'NOT SET'}")
     print(f"Firebase Admin: {'Initialized' if firebase_admin._apps else 'Not initialized'}")
