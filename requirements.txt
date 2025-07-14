@@ -6,3 +6,4 @@ PyJWT
 firebase_admin
 gunicorn
 dotenv
+opencv-python-headless
