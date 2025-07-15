@@ -5,6 +5,10 @@ from middleware import require_api_key
 from firebase_admin import auth as firebase_auth
 import traceback
 from datetime import datetime, timedelta
+from pytz import timezone
+import pytz
+from bson import ObjectId
+
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -270,21 +274,37 @@ def get_login_history():
         auth_header = request.headers.get('Authorization')
 
         if not auth_header or not auth_header.startswith('Bearer '):
-            print("ERROR: No valid Authorization header")
             return jsonify({'message': 'Token tidak ditemukan'}), 401
 
         token = auth_header.split(' ')[1]
         user_id = verify_token(token)
 
         if not user_id:
-            print("ERROR: Token verification failed")
             return jsonify({'message': 'Token tidak valid'}), 401
         
-        history = list(history_collection.find({'user_id': user_id}).sort('timestamp', -1))
-        for h in history:
-            h['_id'] = str(h['_id'])
-            h['timestamp'] = h['timestamp'].isoformat()
-        return jsonify(history) 
+        # Ambil data riwayat login, urutkan dari yang terbaru
+        login_history_cursor = history_collection.find(
+            {'user_id': user_id}
+        ).sort('timestamp', -1)
+
+        history_list = []
+        wib = timezone('Asia/Jakarta')
+
+        for doc in login_history_cursor:
+            # Konversi timestamp ke format WIB
+            local_time = doc['timestamp'].replace(tzinfo=pytz.utc).astimezone(wib)
+            formatted_time = local_time.strftime('%d %B %Y, %H:%M WIB')
+
+            # Tambahkan semua data yang relevan ke dalam list
+            history_list.append({
+                'id': str(doc['_id']),
+                'timestamp': formatted_time,
+                'device': doc.get('device', 'N/A'), # Gunakan .get() untuk keamanan
+                'ip': doc.get('ip', 'N/A')         # jika field tidak ada
+            })
+
+        return jsonify(history_list), 200
+
     except Exception as e:
         print(f"History error: {e}")
         traceback.print_exc()
