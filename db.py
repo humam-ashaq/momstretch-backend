@@ -15,6 +15,7 @@ history_collection = db['login_history']
 movement_collection = db['movement']
 stretching_collection = db['stretching']
 epds_collection = db['epds_records']
+stretch_history_collection = db['stretch_history']
 
 try:
     client.admin.command('ping')

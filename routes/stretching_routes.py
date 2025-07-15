@@ -2,12 +2,16 @@ import traceback
 import cv2
 from flask import Blueprint, request, jsonify
 import numpy as np
-from db import stretching_collection, movement_collection
+from db import stretching_collection, movement_collection, stretch_history_collection, users_collection
 from middleware import require_api_key
+from utils import verify_token
 from bson import ObjectId
 import base64
 import tensorflow as tf
 import mediapipe as mp
+from datetime import datetime
+from pytz import timezone 
+import pytz
 
 stretching_bp = Blueprint('stretching', __name__)
 
@@ -167,6 +171,92 @@ def detect_pose_api():
                 return jsonify({'status': '❌ Gerakan Belum Sesuai'})
         else:
             return jsonify({'status': 'Error: Label tidak ditemukan'})
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': f'Terjadi kesalahan di server: {e}'}), 500
+    
+@stretching_bp.route('/api/stretch_history', methods=['POST'])
+@require_api_key
+def add_history():
+    try:
+        # 1. Ambil token dari header Authorization
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Token tidak ada atau format salah'}), 401
+
+        token = auth_header.split(" ")[1]
+
+        # 2. Panggil fungsi verify_token dari utils
+        decrypted_id = verify_token(token)
+        if not decrypted_id:
+            return jsonify({'error': 'Token tidak valid atau kedaluwarsa'}), 401
+
+        # 3. Cari user di database berdasarkan ID dari token
+        user = users_collection.find_one({'_id': ObjectId(decrypted_id)})
+        if not user:
+            return jsonify({'error': 'User tidak ditemukan'}), 404
+        
+        user_name = user.get('name', 'Nama Tidak Ditemukan')
+
+        # 4. Lanjutkan logika untuk menyimpan history
+        data = request.get_json()
+        if not data or 'movement_name' not in data:
+            return jsonify({'error': 'Data tidak lengkap'}), 400
+            
+        movement_name = data['movement_name']
+
+        history_doc = {
+            'user_name': user_name,
+            'user_id': ObjectId(decrypted_id), # Simpan juga ID user jika perlu
+            'movement_name': movement_name,
+            'timestamp': datetime.utcnow()
+        }
+
+        stretch_history_collection.insert_one(history_doc)
+
+        return jsonify({'message': 'History berhasil disimpan'}), 201
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': f'Terjadi kesalahan di server: {e}'}), 500
+    
+@stretching_bp.route('/api/stretch_history', methods=['GET'])
+@require_api_key
+def get_history():
+    try:
+        # 1. Verifikasi token untuk mendapatkan ID user
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Token tidak ada atau format salah'}), 401
+
+        token = auth_header.split(" ")[1]
+        decrypted_id = verify_token(token)
+        if not decrypted_id:
+            return jsonify({'error': 'Token tidak valid atau kedaluwarsa'}), 401
+
+        # 2. Ambil semua data history untuk user tersebut, urutkan dari yang terbaru
+        user_history_cursor = stretch_history_collection.find(
+            {'user_id': ObjectId(decrypted_id)}
+        ).sort('timestamp', -1) # -1 untuk descending (terbaru dulu)
+
+        history_list = []
+        
+        # Tentukan zona waktu WIB
+        wib = timezone('Asia/Jakarta')
+
+        for doc in user_history_cursor:
+            # Format timestamp ke string yang mudah dibaca dalam WIB
+            local_time = doc['timestamp'].replace(tzinfo=pytz.utc).astimezone(wib)
+            formatted_time = local_time.strftime('%d %B %Y, %H:%M WIB')
+
+            history_list.append({
+                'id': str(doc['_id']),
+                'movement_name': doc['movement_name'],
+                'timestamp': formatted_time
+            })
+
+        return jsonify(history_list), 200
 
     except Exception as e:
         traceback.print_exc()

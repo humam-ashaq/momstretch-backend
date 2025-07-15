@@ -9,3 +9,4 @@ dotenv
 opencv-python-headless==4.9.0.80
 tensorflow-cpu==2.16.1
 mediapipe==0.10.21
+pytz
