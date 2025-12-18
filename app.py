@@ -17,6 +17,34 @@ from routes.epds_routes import epds_bp
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 
+raw_cred = os.getenv('FIREBASE_KEY') or os.getenv('FIREBASE_CREDENTIALS')
+
+if not raw_cred:
+    print("❌ FATAL: Environment Variable Firebase tidak ditemukan!")
+    # Kita raise error agar deployment GAGAL. 
+    # Lebih baik gagal deploy daripada aplikasi jalan tapi error saat login.
+    raise ValueError("Firebase Environment Variable Missing")
+
+try:
+    # A. Parse JSON string ke Dictionary Python
+    cred_dict = json.loads(raw_cred)
+
+    # B. FIX BUG PRIVATE KEY: Ubah double slash \\n menjadi single \n
+    if 'private_key' in cred_dict:
+        cred_dict['private_key'] = cred_dict['private_key'].replace('\\n', '\n')
+
+    # C. Initialize App (Cek dulu biar gak double init)
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(cred_dict)
+        firebase_admin.initialize_app(cred)
+        print("✅ SUCCESS: Firebase Admin initialized successfully!")
+        
+except Exception as e:
+    print(f"❌ CRITICAL ERROR initializing Firebase: {str(e)}")
+    traceback.print_exc()
+    # Paksa berhenti jika Firebase gagal init
+    raise e
+
 def create_app():
     app = Flask(__name__)
     
@@ -29,26 +57,10 @@ def create_app():
         }
     })
 
-    # Initialize Firebase Admin
-    try:
-        firebase_creds = os.getenv('FIREBASE_CREDENTIALS')
-        if not firebase_creds:
-            raise Exception("FIREBASE_CREDENTIALS environment variable not set")
-        
-        cred_dict = json.loads(firebase_creds)
-        cred = credentials.Certificate(cred_dict)
-        firebase_admin.initialize_app(cred)
-        print("Firebase Admin initialized successfully")
-    except Exception as e:
-        print(f"Error initializing Firebase Admin: {e}")
-
     # Add request logging middleware
     @app.before_request
     def log_request():
-        print(f"\n=== Incoming Request ===")
-        print(f"Method: {request.method}")
-        print(f"URL: {request.url}")
-        print(f"Headers: {dict(request.headers)}")
+        print(f"\n➡️ [{request.method}] {request.url}")
         if request.is_json:
             try:
                 body = request.get_json()
